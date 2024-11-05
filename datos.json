@@ -1,0 +1,38 @@
+{
+    "documento": [
+      {
+        "nu_liquidacion": "12345",
+        "co_tipo": "A1",
+        "co_cli_pro": "001",
+        "nu_serie": "001",
+        "nu_docu": "1001",
+        "de_obs_control_doc": "Observación 1"
+      },
+      {
+        "nu_liquidacion": "12346",
+        "co_tipo": "B2",
+        "co_cli_pro": "002",
+        "nu_serie": "002",
+        "nu_docu": "1002",
+        "de_obs_control_doc": "Observación 2"
+      },
+      {
+        "nu_liquidacion": "12347",
+        "co_tipo": "A1",
+        "co_cli_pro": "003",
+        "nu_serie": "003",
+        "nu_docu": "1003",
+        "de_obs_control_doc": "Observación 3"
+      }
+    ],
+    "TIPO_LIQUIDACION": [
+      {
+        "co_tipo": "A1",
+        "de_tipo_liquidacion": "Tipo A1"
+      },
+      {
+        "co_tipo": "B2",
+        "de_tipo_liquidacion": "Tipo B2"
+      }
+    ]
+  }
