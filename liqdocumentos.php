@@ -27,7 +27,7 @@ try {
     <link href="css/styles.css" rel="stylesheet" />
     <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@10">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@10.16.7/dist/sweetalert2.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <style>.form-group-hidden{display:none}</style>
@@ -175,6 +175,7 @@ try {
                 </div>
             </div>
             </form>
+            <canvas id="myChart"></canvas>
         </main>
         <footer class="py-4 bg-light mt-auto">
             <div class="container-fluid px-4">
@@ -213,7 +214,8 @@ try {
                 $('#fecha2').focus(); 
             });
 
-            $('#buscar-form').submit(function() {
+            $('#buscar-form').submit(function(e) {
+                e.preventDefault();
                 var tipo_liquidacion = $('#tipo_liquidacion').val();
                 var fecha1 = $('#fecha1').val();
                 var fecha2 = $('#fecha2').val();
@@ -233,13 +235,14 @@ try {
                     success: function(response) {
                         var documentos = JSON.parse(response);
                         var tabla = '<table class="table table-striped table-sm">';
-                        tabla += '<thead><tr><th>Documento</th><th>Tipo Doc</th><th>Serie</th><th>Número</th><th>File</th><th>Fecha</th><th>Monto</th></tr></thead><tbody>';
+                        tabla += '<thead><tr><th>Documento</th><th>Tipo Doc</th><th>Serie</th><th>Número</th><th>File</th><th>Fecha</th><th>Monto</th><th>&nbsp;</th></tr></thead><tbody>';
                         
                         var sumatotal = 0;
-                        
+
                         $.each(documentos, function(index, documento) {
                             var monto = parseFloat(documento.mo_total);
                             sumatotal += monto;
+
                             tabla += '<tr>';
                             tabla += '<td><span class="badge bg-primary">' + documento.nu_docu + '</span></td>';
                             tabla += '<td>' + documento.co_tip_doc + '</td>';
@@ -248,12 +251,13 @@ try {
                             tabla += '<td>' + documento.nu_file + '</td>';
                             tabla += '<td>' + documento.fe_docu + '</td>';
                             tabla += '<td class="text-right">' + monto.toFixed(2) + '</td>';
+                            tabla += '<td><input type="checkbox" class="monto-checkbox" data-documento=\'' + JSON.stringify(documento) + '\' data-monto="' + monto + '" checked></td>';
                             tabla += '</tr>';
                         });
 
                         tabla += '<tr>';
-                        tabla += '<td colspan="6" class="text-right"><strong>Total:</strong></td>';
-                        tabla += '<td class="text-right"><strong>' + sumatotal.toFixed(2) + '</strong></td>';
+                        tabla += '<td colspan="7" class="text-right"><strong>Total:</strong></td>';
+                        tabla += '<td class="text-right" id="total-monto"><strong>' + sumatotal.toFixed(2) + '</strong></td>';
                         tabla += '</tr>';
 
                         tabla += '</tbody></table>';
@@ -266,64 +270,75 @@ try {
                             position: 'top',
                             icon: 'success',
                             title: 'Se han encontrado ' + documentos.length + ' registros.',
-                            showConfirmButton: false,
-                            timer: 3000
+                            timer: 2000,
+                            showConfirmButton: false
                         });
                     }
                 });
-
-                return false;
             });
 
+            // Capturar el evento cuando se marca o desmarca un checkbox
+            $(document).on('change', '.monto-checkbox', function() {
+                var monto = parseFloat($(this).data('monto'));
+                var sumatotal = 0; // Inicializar el total
+
+                // Recalcular el total
+                $('.monto-checkbox:checked').each(function() {
+                    sumatotal += parseFloat($(this).data('monto'));
+                });
+
+                // Actualizar el total mostrado
+                $('#total-monto').html('<strong>' + sumatotal.toFixed(2) + '</strong>');
+            });
+
+            // Capturar los datos seleccionados y enviarlos al backend
             $('#liquidar').click(function() {
-            var nu_liquidacion = $('#nu_liquidacion').val();
-            var tipo_liquidacion = $('#tipo_liquidacion').val();
-            var fecha1 = $('#fecha1').val();
-            var fecha2 = $('#fecha2').val();
-            var tipo_boleto = $('#tipo_boleto').val();
-            var codigo_referencia = $('#codigo_referencia').val();
+                var seleccionados = [];
+                var nu_liquidacion = $('#nu_liquidacion').val();
+                var tipo_liquidacion = $('#tipo_liquidacion').val();
+                var fecha1 = $('#fecha1').val();
+                var fecha2 = $('#fecha2').val();
+                var tipo_boleto = $('#tipo_boleto').val();
+                var codigo_referencia = $('#codigo_referencia').val();
 
-            $.ajax({
-                url: 'liquidar_busquedadoc.php',
-                method: 'POST',
-                data: {
-                    nu_liquidacion: nu_liquidacion,
-                    tipo_liquidacion: tipo_liquidacion,
-                    fecha1: fecha1,
-                    fecha2: fecha2,
-                    tipo_boleto: tipo_boleto,
-                    codigo_referencia: codigo_referencia
-                },
-                success: function(response) {
-                    var data = JSON.parse(response);
-                    if (data.error) {
-                        $('#resultados').html('<div class="alert alert-danger" role="alert">' + data.error + '</div>');
-                            Swal.fire({
-                                toast: true,
-                                position: 'top-right',
-                                icon: 'error',
-                                title: 'Registros con liquidación.',
-                                showConfirmButton: false,
-                                timer: 3000
-                            });
-                        return;
-                    } else if (data.success) {
-                        $('#resultados').html('<div class="alert alert-success" role="alert">' + data.success + '</div>');
-                            Swal.fire({
-                                toast: true,
-                                position: 'top-right',
-                                icon: 'success',
-                                title: 'Se actualizaron correctamente ' + data.success + ' liquidaciones.',
-                                showConfirmButton: false,
-                                timer: 3000
-                            });
+                // Iterar sobre los checkboxes seleccionados
+                $('.monto-checkbox:checked').each(function() {
+                    var documento = $(this).data('documento');
+                    seleccionados.push(documento.nu_docu);
+                });
+
+                // Enviar el JSON al backend
+                $.ajax({
+                    url: 'liquidar_busquedadoc.php',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        registros: seleccionados,
+                        nu_liquidacion: nu_liquidacion,
+                        tipo_liquidacion: tipo_liquidacion,
+                        fecha1: fecha1,
+                        fecha2: fecha2,
+                        tipo_boleto: tipo_boleto,
+                        codigo_referencia: codigo_referencia
+                    }),
+                    success: function(response) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Liquidación realizada correctamente.',
+                            text: 'Se procesaron ' + seleccionados.length + ' registros.',
+                            confirmButtonText: 'OK'
+                        });
+                    },
+                    error: function(xhr, status, error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error al realizar la liquidación',
+                            text: 'Por favor, intente nuevamente.',
+                            confirmButtonText: 'OK'
+                        });
                     }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Error en la petición AJAX: ' + error);
-                }
+                });
             });
-        });
         });
         function limpiarFormulario() {
             document.getElementById('buscar-form').reset();
